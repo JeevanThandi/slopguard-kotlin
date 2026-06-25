@@ -1,0 +1,17 @@
+# Gradle / build output
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.kotlin/
+local.properties
+
+# Editor / OS
+.DS_Store
+*.swp

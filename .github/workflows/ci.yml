@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build & test
+        run: ./gradlew build --stacktrace
+
+  dogfood:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build CLI
+        run: ./gradlew :app:installDist
+
+      # slopguard-kotlin must keep its own source under control. Dogfood the whole
+      # tool with real coverage via Kover (the default) — this drives the project's
+      # own `./gradlew test koverXmlReport` and joins the aggregated report.
+      - name: Dogfood (analyze own source with Kover coverage)
+        run: |
+          BIN=app/build/install/slopguard-kotlin/bin/slopguard-kotlin
+          "$BIN" analyze --path . --project-dir . --fail-over 300
+
+      # Regression baseline: the fixture must report a stable shape. Drift here
+      # signals an analyzer bug, not a code change in the fixture.
+      - name: Baseline assertion (sample-apps/todolist)
+        run: |
+          BIN=app/build/install/slopguard-kotlin/bin/slopguard-kotlin
+          json=$("$BIN" analyze --path sample-apps/todolist/src/main/kotlin \
+            --project-dir sample-apps/todolist --json --quiet)
+          methods=$(echo "$json" | jq '.summary.methodCount')
+          crappy=$(echo "$json" | jq '.summary.crappyMethodCount')
+          coverage=$(echo "$json" | jq '.summary.weightedCoverage')
+          echo "methods=$methods crappy=$crappy coverage=$coverage"
+          test "$methods" = "9" || { echo "expected 9 methods, got $methods"; exit 1; }
+          test "$crappy" = "0"  || { echo "expected 0 crappy methods, got $crappy"; exit 1; }
+          test "$coverage" = "100" || { echo "expected 100% coverage, got $coverage"; exit 1; }
