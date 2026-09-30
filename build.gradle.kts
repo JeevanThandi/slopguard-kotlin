@@ -7,7 +7,7 @@ plugins {
 
 allprojects {
     group = "dev.slopguard"
-    version = "0.1.0"
+    version = "0.2.0"
 
     repositories {
         mavenCentral()
@@ -40,6 +40,7 @@ subprojects {
 dependencies {
     add("kover", project(":core"))
     add("kover", project(":coverage"))
+    add("kover", project(":mutation"))
     add("kover", project(":cli"))
     add("kover", project(":app"))
 }

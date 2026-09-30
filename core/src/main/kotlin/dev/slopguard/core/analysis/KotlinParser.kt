@@ -37,14 +37,24 @@ class KotlinParser : AutoCloseable {
         PsiFileFactory.getInstance(environment.project)
     }
 
-    /** Parse [text] (reported under [name]) into a [KtFile]. */
+    /**
+     * Parse [text] (reported under [name]) into a [KtFile]. Line separators are
+     * normalized to `\n` first, as the compiler does when it reads a file: the
+     * PSI lexer treats `\r` as a bad character. Line numbers are unchanged.
+     */
     fun parse(name: String, text: String): KtFile {
-        val psi = factory.createFileFromText(name, KotlinLanguage.INSTANCE, text)
+        val psi = factory.createFileFromText(name, KotlinLanguage.INSTANCE, normalizeLineSeparators(text))
         return psi as? KtFile
             ?: throw IllegalStateException("PSI factory did not return a KtFile for $name")
     }
 
     override fun close() {
         Disposer.dispose(disposable)
+    }
+
+    companion object {
+        /** `\r\n` and a lone `\r` become `\n`. Returns [text] itself when it holds no `\r`. */
+        fun normalizeLineSeparators(text: String): String =
+            if ('\r' !in text) text else text.replace("\r\n", "\n").replace('\r', '\n')
     }
 }

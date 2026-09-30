@@ -38,7 +38,8 @@ class PipelineArgs(
  */
 object AnalysisPipeline {
 
-    private val TIMESTAMP: DateTimeFormatter =
+    /** The `generatedAt` format shared by every report: UTC, milliseconds, `Z`. */
+    val TIMESTAMP: DateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
     fun run(args: PipelineArgs): CrapReport {

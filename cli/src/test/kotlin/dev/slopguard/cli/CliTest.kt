@@ -55,11 +55,48 @@ class CliTest {
     }
 
     @Test
+    fun analyzeHelpPrintsTheUsage() {
+        for (flag in listOf("--help", "-h")) {
+            val r = run("analyze", flag)
+            assertEquals(0, r.code, flag)
+            assertContains(r.out, "ANALYZE OPTIONS", message = flag)
+            assertEquals(Cli.usage() + System.lineSeparator(), r.out, flag)
+            assertEquals("", r.err, flag)
+        }
+    }
+
+    @Test
+    fun mutateHelpPrintsTheUsage() {
+        for (flag in listOf("--help", "-h")) {
+            val r = run("mutate", flag)
+            assertEquals(0, r.code, flag)
+            assertContains(r.out, "MUTATE OPTIONS", message = flag)
+            assertEquals(Cli.usage() + System.lineSeparator(), r.out, flag)
+            assertEquals("", r.err, flag)
+        }
+    }
+
+    @Test
+    fun subcommandHelpWinsOverTheOtherFlags() {
+        // With --help or -h nothing runs, so the missing path is never checked.
+        val cases = listOf(
+            listOf("analyze", "--path", "/nope/does/not/exist", "--json", "--help"),
+            listOf("mutate", "--path", "/nope/does/not/exist", "--json", "-h"),
+        )
+        for (args in cases) {
+            val r = run(*args.toTypedArray())
+            assertEquals(0, r.code, args.toString())
+            assertEquals(Cli.usage() + System.lineSeparator(), r.out, args.toString())
+            assertEquals("", r.err, args.toString())
+        }
+    }
+
+    @Test
     fun analyzeNoCoveragePretty() {
         val dir = sampleProject()
         val r = run("analyze", "--path", dir.absolutePath, "--no-coverage", "--quiet")
         assertEquals(0, r.code)
-        assertContains(r.out, "slopguard-kotlin 0.1.0")
+        assertContains(r.out, "slopguard-kotlin 0.2.0")
         assertContains(r.out, "coverage: unavailable")
         dir.deleteRecursively()
     }

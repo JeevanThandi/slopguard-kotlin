@@ -57,6 +57,9 @@ internal class LineMap(text: String) {
         }
         return ans + 1
     }
+
+    /** Character offset where the 1-based [line] starts. */
+    fun lineStart(line: Int): Int = starts[line - 1]
 }
 
 /**

@@ -64,3 +64,20 @@ jobs:
           test "$methods" = "9" || { echo "expected 9 methods, got $methods"; exit 1; }
           test "$crappy" = "0"  || { echo "expected 0 crappy methods, got $crappy"; exit 1; }
           test "$coverage" = "100" || { echo "expected 100% coverage, got $coverage"; exit 1; }
+
+      # Mutation baseline: every mutant of the fixture must be killed. A survivor
+      # means an operator or the runner changed, or the fixture's tests got weaker.
+      - name: Mutation baseline (sample-apps/todolist)
+        run: |
+          BIN=app/build/install/slopguard-kotlin/bin/slopguard-kotlin
+          json=$("$BIN" mutate --path sample-apps/todolist/src/main/kotlin \
+            --project-dir sample-apps/todolist --json --quiet)
+          mutants=$(echo "$json" | jq '.summary.mutantCount')
+          killed=$(echo "$json" | jq '.summary.killed')
+          survived=$(echo "$json" | jq '.summary.survived')
+          score=$(echo "$json" | jq '.summary.mutationScore')
+          echo "mutants=$mutants killed=$killed survived=$survived score=$score"
+          test "$mutants" = "15" || { echo "expected 15 mutants, got $mutants"; exit 1; }
+          test "$killed" = "15" || { echo "expected 15 killed mutants, got $killed"; exit 1; }
+          test "$survived" = "0" || { echo "expected 0 surviving mutants, got $survived"; exit 1; }
+          git diff --exit-code -- sample-apps/todolist/src || { echo "mutate left a source file changed"; exit 1; }

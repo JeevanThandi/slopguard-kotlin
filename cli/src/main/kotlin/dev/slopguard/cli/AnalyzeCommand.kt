@@ -31,6 +31,7 @@ object AnalyzeCommand {
         var failOver: Double? = null
         var verbose: Boolean = false
         var quiet: Boolean = false
+        var help: Boolean = false
     }
 
     fun run(args: List<String>, stdout: PrintStream, stderr: PrintStream): Int {
@@ -40,6 +41,10 @@ object AnalyzeCommand {
             // Argument errors are reported in text form (JSON mode isn't known yet).
             stderr.println(CrapReportFormatter.errorText(envelopeFor(e)))
             return 1
+        }
+        if (options.help) {
+            stdout.println(Cli.usage())
+            return 0
         }
 
         val reporter = ProgressReporter(
@@ -112,9 +117,9 @@ object AnalyzeCommand {
             fun value(): String = inlineValue ?: next(flag)
 
             when (flag) {
-                "-p", "--path" -> o.path = value()
+                "-p", "--path" -> o.path = Cli.expandTilde(value())
                 "-t", "--threshold" -> o.threshold = parseDouble(flag, value())
-                "--project-dir" -> o.projectDir = value()
+                "--project-dir" -> o.projectDir = Cli.expandTilde(value())
                 "--no-coverage" -> o.noCoverage = true
                 "--coverage-file" -> o.coverageFile = value()
                 "--coverage-tool" -> o.coverageTool = CoverageTool.fromWire(value())
@@ -127,6 +132,10 @@ object AnalyzeCommand {
                 "--fail-over" -> o.failOver = parseDouble(flag, value())
                 "-v", "--verbose" -> o.verbose = true
                 "--quiet" -> o.quiet = true
+                "-h", "--help" -> {
+                    o.help = true
+                    return o
+                }
                 else -> throw SlopguardError.invalidArgument(flag, "unknown flag")
             }
             i++

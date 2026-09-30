@@ -15,6 +15,10 @@ enum class ErrorCode(val wire: String) {
     COVERAGE_DECODE_FAILED("coverage_decode_failed"),
     INVALID_ARGUMENT("invalid_argument"),
     UNSUPPORTED("unsupported"),
+    RUNNER_UNAVAILABLE("runner_unavailable"),
+    BASELINE_FAILED("baseline_failed"),
+    MUTATION_IN_PROGRESS("mutation_in_progress"),
+    RESTORE_FAILED("restore_failed"),
     INTERNAL_ERROR("internal_error"),
 }
 
@@ -45,11 +49,13 @@ class SlopguardError(
         fun coverageDataMissing(reason: String) =
             SlopguardError(ErrorCode.COVERAGE_DATA_MISSING, reason)
 
-        fun projectRootNotFound(start: String) =
+        fun projectRootNotFound(
+            start: String,
+            hint: String = "Pass --project-dir <dir>, --coverage-file <jacoco.xml>, or --no-coverage.",
+        ) =
             SlopguardError(
                 ErrorCode.PROJECT_ROOT_NOT_FOUND,
-                "No Gradle project root (settings.gradle[.kts] or build.gradle[.kts]) found above $start. " +
-                    "Pass --project-dir <dir>, --coverage-file <jacoco.xml>, or --no-coverage.",
+                "No Gradle project root (settings.gradle[.kts] or build.gradle[.kts]) found above $start. $hint",
             )
 
         fun testRunFailed(exitCode: Int, tail: String) =
@@ -66,6 +72,29 @@ class SlopguardError(
 
         fun unsupported(reason: String) =
             SlopguardError(ErrorCode.UNSUPPORTED, reason)
+
+        /** The test runner could not be launched at all (for example, no `gradlew` and no `gradle` on PATH). */
+        fun runnerUnavailable(reason: String) =
+            SlopguardError(ErrorCode.RUNNER_UNAVAILABLE, "Test runner is unavailable: $reason")
+
+        /** `mutate` needs a green suite: with failing tests every mutant would look killed. */
+        fun baselineFailed(exitCode: Int, tail: String) =
+            SlopguardError(
+                ErrorCode.BASELINE_FAILED,
+                "The test suite fails without any mutation (exit $exitCode). Fix the failing tests first: $tail",
+            )
+
+        fun mutationInProgress(pid: Long, projectRoot: String) =
+            SlopguardError(
+                ErrorCode.MUTATION_IN_PROGRESS,
+                "Another slopguard mutate run (pid $pid) is using $projectRoot.",
+            )
+
+        fun restoreFailed(path: String, backupPath: String, underlying: String) =
+            SlopguardError(
+                ErrorCode.RESTORE_FAILED,
+                "Could not restore $path after mutation: $underlying. The original is saved at $backupPath.",
+            )
     }
 }
 

@@ -31,6 +31,27 @@ class TodoStoreTest {
     }
 
     @Test
+    fun togglesTheFirstItem() {
+        val store = TodoStore()
+        val a = store.add("a")
+        store.add("b")
+        assertTrue(store.toggle(a.id))
+        assertTrue(store.all().first().completed)
+        assertEquals(1, store.activeCount)
+    }
+
+    @Test
+    fun clearCompletedReturnsHowManyItemsItRemoved() {
+        val store = TodoStore()
+        store.add("a")
+        val b = store.add("b")
+        store.add("c")
+        store.toggle(b.id)
+        assertEquals(1, store.clearCompleted())
+        assertEquals(listOf("a", "c"), store.all().map { it.title })
+    }
+
+    @Test
     fun removesAndClears() {
         val store = TodoStore()
         val a = store.add("a")

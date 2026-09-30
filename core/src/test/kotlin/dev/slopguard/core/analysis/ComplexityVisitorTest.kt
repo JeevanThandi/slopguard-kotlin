@@ -188,4 +188,17 @@ class ComplexityVisitorTest {
         assertTrue(methods.any { it.name == "x.get" })
         assertTrue(methods.any { it.name == "x.set" })
     }
+
+    @Test
+    fun crlfSourcesParseLikeLfSources() {
+        // The PSI lexer rejects `\r`; the parser normalizes line separators first.
+        val lf = "fun f(a: Int) =\n    if (a > 0 && a < 9) 1 else 2\n"
+        val crlf = lf.replace("\n", "\r\n")
+        val expected = method(lf, "f")
+        val actual = method(crlf, "f")
+        assertEquals(3, actual.complexity)
+        assertEquals(expected.complexity, actual.complexity)
+        assertEquals(expected.cognitiveComplexity, actual.cognitiveComplexity)
+        assertEquals(expected.startLine to expected.endLine, actual.startLine to actual.endLine)
+    }
 }

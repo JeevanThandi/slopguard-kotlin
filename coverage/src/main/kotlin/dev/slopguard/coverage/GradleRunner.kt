@@ -18,24 +18,23 @@ class GradleRunner(
     private val reporter: ProgressReporter,
 ) {
     fun run(): GradleOutcome {
-        val command = buildList {
-            add(gradleCommand())
-            add(testTask)
-            add(reportTask)
-            add("--console=plain")
-            // Keep going to the report task even if some tests fail — partial
-            // coverage is still useful, exactly like the sibling ports.
-            add("--continue")
-        }
         reporter.phase("running gradle $testTask $reportTask with coverage…")
-        val outcome = ProcessRunner.run(command, projectRoot, reporter)
+        val outcome = ProcessRunner.run(command(), projectRoot, reporter)
         return GradleOutcome(outcome.exitCode, outcome.outputTail, findReportXml())
     }
 
-    private fun gradleCommand(): String {
-        val wrapper = File(projectRoot, "gradlew")
-        return if (wrapper.exists()) wrapper.absolutePath else "gradle"
-    }
+    /**
+     * The coverage run: `./gradlew <test-task> <report-task> --console=plain
+     * --continue`. `--continue` keeps going to the report task even if some
+     * tests fail — partial coverage is still useful, exactly like the sibling ports.
+     */
+    fun command(): List<String> = listOf(gradleExecutable(projectRoot), testTask, reportTask, "--console=plain", "--continue")
+
+    /** Every XML file under the project root: the candidates for [pickReportXml]. */
+    fun reportXmlCandidates(): List<File> =
+        projectRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "xml" }
+            .toList()
 
     /**
      * Locate the coverage XML report. Prefers the selected tool's report directory
@@ -43,16 +42,17 @@ class GradleRunner(
      * directories (JaCoCo, Kover, and the Android Gradle Plugin's native
      * `reports/coverage`), so it works regardless of which produced the report.
      */
-    private fun findReportXml(): File? {
-        val xmls = projectRoot.walkTopDown()
-            .filter { it.isFile && it.extension == "xml" }
-            .toList()
-        return pickReportXml(xmls, projectRoot, tool)
-    }
+    fun findReportXml(): File? = pickReportXml(reportXmlCandidates(), projectRoot, tool)
 
-    internal companion object {
+    companion object {
         val ALL_REPORT_DIRS = listOf("/reports/jacoco/", "/reports/kover/", "/reports/coverage/")
         val CANONICAL_NAMES = setOf("jacocoTestReport.xml", "report.xml")
+
+        /** The project's Gradle wrapper when it has one, else `gradle` from PATH. */
+        fun gradleExecutable(projectRoot: File): String {
+            val wrapper = File(projectRoot, "gradlew")
+            return if (wrapper.exists()) wrapper.absolutePath else "gradle"
+        }
 
         /**
          * Choose the coverage report among [candidates]. Prefers the selected

@@ -1,3 +1,3 @@
 rootProject.name = "slopguard-kotlin"
 
-include("core", "coverage", "cli", "app")
+include("core", "coverage", "mutation", "cli", "app")
